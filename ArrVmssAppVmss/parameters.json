@@ -1,0 +1,33 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "default_name": {
+            "value": "<Default name used for Azure Resources in this deployment. Pick a name that will not collide with other resources>"
+        },
+        "storage_account_name": {
+            "value": "<Storage account that contains the VHD blobs for the ARR and app server VM scale sets>"
+        },
+        "app_server_image_vhd_name": {
+            "value": "<Name of the vhd blob for the app server VM scale set without the .vhd extension. Must be in a container named 'images'>"
+        },
+        "load_balancer_image_vhd_name": {
+            "value": "<Name of the vhd blob for the ARR VM scale set without the .vhd extension. Must be in a container named 'images'>"
+        },
+        "vss_admin_username": {
+            "value": "<Username for built in administrator. Cannot be 'Administrator'>"
+        },
+        "file_share_name": {
+            "value": "<Name of file share that contains app server shared config, ARR shared config, and central certificate store>"
+        },
+        "shared_config_directory": {
+            "value": "<Path from root of file share to directory containing the app server shared config, e.g. 'AppServerConfig'>"
+        },
+        "load_balancer_shared_config_directory": {
+            "value": "<Path from root of file share to directory containing the ARR shared config, e.g. 'ArrConfig'>"
+        },
+        "cert_store_directory": {
+            "value": "<Path from root of file share to directory containing the central certificate store, e.g. 'CentralCertStore'>"
+        }
+    }
+}

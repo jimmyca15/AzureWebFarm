@@ -1,0 +1,499 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "default_name": {
+            "type": "string"
+        },
+        "storage_account_name": {
+            "type": "string"
+        },
+        "app_server_image_vhd_name": {
+            "type": "string"
+        },
+        "load_balancer_image_vhd_name": {
+            "type": "string"
+        },
+        "vss_admin_username": {
+            "type": "string"
+        },
+        "file_share_name": {
+            "type": "string"
+        },
+        "shared_config_directory": {
+            "type": "string"
+        },
+        "load_balancer_shared_config_directory": {
+            "type": "string"
+        },
+        "cert_store_directory": {
+            "type": "string"
+        },
+        "vss_admin_password": {
+            "type": "securestring"
+        },
+        "config_key_password": {
+            "type": "securestring"
+        },
+        "cert_store_key_password": {
+            "type": "securestring"
+        }
+    },
+    "variables": {
+        "load_balancer_name": "[parameters('default_name')]",
+        "public_ip_name": "[parameters('default_name')]",
+        "vnet_name": "[parameters('default_name')]",
+        "app_server_vss_name": "[concat(parameters('default_name'),'Apps')]",
+        "load_balancer_vss_name": "[concat(parameters('default_name'),'Lb')]",
+        "load_balancer_backend_pool_name": "[concat('bepool_', variables('load_balancer_vss_name'))]",
+        "load_balancer_natpool_name": "[concat('natpool_', variables('load_balancer_vss_name'))]",
+        "app_server_subnet_name": "[concat(parameters('default_name'),'Apps')]",
+        "load_balancer_subnet_name": "[concat(parameters('default_name'),'Lb')]",
+        "app_server_image_name": "[concat(parameters('default_name'),'AppServer')]",
+        "load_balancer_image_name": "[concat(parameters('default_name'),'LoadBalancer')]",
+        "drive_letter": "G",
+        "file_share_location": "[concat('\\\\', parameters('storage_account_name'), '.file.core.windows.net\\', parameters('file_share_name'))]",
+        "vnet_prefix": "10.5.0.0/16",
+        "app_server_subnet_prefix": "10.5.0.0/21",
+        "load_balancer_subnet_prefix": "10.5.8.0/21"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "sku": {
+                "name": "Standard_D3_v2",
+                "tier": "Standard",
+                "capacity": 0
+            },
+            "name": "[variables('app_server_vss_name')]",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "singlePlacementGroup": true,
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "virtualMachineProfile": {
+                    "osProfile": {
+                        "computerNamePrefix": "AzWebFarm",
+                        "adminUsername": "[parameters('vss_admin_username')]",
+                        "adminPassword": "[parameters('vss_admin_password')]",
+                        "windowsConfiguration": {
+                            "provisionVMAgent": true,
+                            "enableAutomaticUpdates": true
+                        },
+                        "secrets": []
+                    },
+                    "storageProfile": {
+                        "osDisk": {
+                            "createOption": "FromImage",
+                            "caching": "ReadWrite",
+                            "managedDisk": {
+                                "storageAccountType": "Standard_LRS"
+                            }
+                        },
+                        "imageReference": {
+                            "id": "[resourceId('Microsoft.Compute/images', variables('app_server_image_name'))]"
+                        }
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "[concat(variables('app_server_vss_name'),'Nic')]",
+                                "properties": {
+                                    "primary": true,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "[concat(variables('app_server_vss_name'),'IpConfig')]",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnet_name'), variables('app_server_subnet_name'))]"
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "extensionProfile": {
+                        "extensions": [
+                            {
+                                "name": "vssinitextension",
+                                "properties": {
+                                    "publisher": "Microsoft.Compute",
+                                    "type": "CustomScriptExtension",
+                                    "typeHandlerVersion": "1.8",
+                                    "autoUpgradeMinorVersion": true,
+                                    "settings": {
+                                        "fileUris": [
+                                            "https://gist.githubusercontent.com/jimmyca15/223799a9a05c073d899049e110ca7872/raw/e763759604a6fb9bc05c56b677555a906b2c37ae/VssInit.ps1"
+                                        ]
+                                    },
+                                    "protectedSettings": {
+                                        "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -File ./VssInit.ps1 -StorageAccountName ', parameters('storage_account_name'), ' -StorageAccountKey ', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storage_account_name')), '2016-01-01').keys[0].value, ' -DriveLetter ', variables('drive_letter'), ' -FileShareLocation ', variables('file_share_location'), ' -SharedConfigPath ', parameters('shared_config_directory'), ' -ConfigKeyPassword ', parameters('config_key_password'), ' -CertStorePath ', parameters('cert_store_directory'), ' -CertStoreKeyPassword ', parameters('cert_store_key_password'), ' >> c:\\vssinit.log 2>&1 ')]"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "overprovision": false
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/images', variables('app_server_image_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnet_name'), variables('app_server_subnet_name'))]",
+                "[resourceId('Microsoft.Network/loadBalancers', variables('load_balancer_name'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachineScaleSets",
+            "sku": {
+                "name": "Standard_D3_v2",
+                "tier": "Standard",
+                "capacity": 0
+            },
+            "name": "[variables('load_balancer_vss_name')]",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "singlePlacementGroup": true,
+                "upgradePolicy": {
+                    "mode": "Manual"
+                },
+                "virtualMachineProfile": {
+                    "osProfile": {
+                        "computerNamePrefix": "AzWebFarm",
+                        "adminUsername": "[parameters('vss_admin_username')]",
+                        "adminPassword": "[parameters('vss_admin_password')]",
+                        "windowsConfiguration": {
+                            "provisionVMAgent": true,
+                            "enableAutomaticUpdates": true
+                        },
+                        "secrets": []
+                    },
+                    "storageProfile": {
+                        "osDisk": {
+                            "createOption": "FromImage",
+                            "caching": "ReadWrite",
+                            "managedDisk": {
+                                "storageAccountType": "Standard_LRS"
+                            }
+                        },
+                        "imageReference": {
+                            "id": "[resourceId('Microsoft.Compute/images', variables('load_balancer_image_name'))]"
+                        }
+                    },
+                    "networkProfile": {
+                        "networkInterfaceConfigurations": [
+                            {
+                                "name": "[concat(variables('load_balancer_vss_name'),'Nic')]",
+                                "properties": {
+                                    "primary": true,
+                                    "ipConfigurations": [
+                                        {
+                                            "name": "[concat(variables('load_balancer_vss_name'),'IpConfig')]",
+                                            "properties": {
+                                                "subnet": {
+                                                    "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnet_name'), variables('load_balancer_subnet_name'))]"
+                                                },
+                                                "loadBalancerBackendAddressPools": [
+                                                    {
+                                                        "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('load_balancer_name')), '/backendAddressPools/', variables('load_balancer_backend_pool_name'))]"
+                                                    }
+                                                ],
+                                                "loadBalancerInboundNatPools": [
+                                                    {
+                                                        "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('load_balancer_name')), '/inboundNatPools/', variables('load_balancer_natpool_name'))]"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        ]
+                    },
+                    "extensionProfile": {
+                        "extensions": [
+                            {
+                                "name": "lbvssinitextension",
+                                "properties": {
+                                    "publisher": "Microsoft.Compute",
+                                    "type": "CustomScriptExtension",
+                                    "typeHandlerVersion": "1.8",
+                                    "autoUpgradeMinorVersion": true,
+                                    "settings": {
+                                        "fileUris": [
+                                            "https://gist.githubusercontent.com/jimmyca15/223799a9a05c073d899049e110ca7872/raw/e763759604a6fb9bc05c56b677555a906b2c37ae/VssInit.ps1"
+                                        ]
+                                    },
+                                    "protectedSettings": {
+                                        "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -File ./VssInit.ps1 -StorageAccountName ', parameters('storage_account_name'), ' -StorageAccountKey ', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storage_account_name')), '2016-01-01').keys[0].value, ' -DriveLetter ', variables('drive_letter'), ' -FileShareLocation ', variables('file_share_location'), ' -SharedConfigPath ', parameters('load_balancer_shared_config_directory'), ' -ConfigKeyPassword ', parameters('config_key_password'), ' -CertStorePath ', parameters('cert_store_directory'), ' -CertStoreKeyPassword ', parameters('cert_store_key_password'), ' >> c:\\vssinit.log 2>&1 ')]"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                },
+                "overprovision": false
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Compute/images', variables('load_balancer_image_name'))]",
+                "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnet_name'), variables('load_balancer_subnet_name'))]",
+                "[resourceId('Microsoft.Network/loadBalancers', variables('load_balancer_name'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Network/loadBalancers",
+            "name": "[variables('load_balancer_name')]",
+            "apiVersion": "2017-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "provisioningState": "Succeeded",
+                "frontendIPConfigurations": [
+                    {
+                        "name": "LoadBalancerFrontEnd",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIPAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('public_ip_name'))]"
+                            }
+                        }
+                    }
+                ],
+                "backendAddressPools": [
+                    {
+                        "name": "[variables('load_balancer_backend_pool_name')]",
+                        "properties": {
+                            "provisioningState": "Succeeded"
+                        }
+                    }
+                ],
+                "loadBalancingRules": [
+                    {
+                        "name": "web",
+                        "properties": {
+                            "backendAddressPool": {
+                                "id": "[concat(subscription().id, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('load_balancer_name'), '/backendAddressPools/', variables('load_balancer_backend_pool_name'))]"
+                            },
+                            "backendPort": 80,
+                            "enableFloatingIP": false,
+                            "frontendIPConfiguration": {
+                                "id": "[concat(subscription().id, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('load_balancer_name'), '/frontendIPConfigurations/LoadBalancerFrontEnd')]"
+                            },
+                            "frontendPort": 80,
+                            "probe": {
+                                "id": "[concat(subscription().id, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('load_balancer_name'), '/probes/web')]"
+                            },
+                            "protocol": "Tcp",
+                            "loadDistribution": "SourceIP"
+                        }
+                    },
+                    {
+                        "name": "webHttps",
+                        "properties": {
+                            "backendAddressPool": {
+                                "id": "[concat(subscription().id, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('load_balancer_name'), '/backendAddressPools/', variables('load_balancer_backend_pool_name'))]"
+                            },
+                            "backendPort": 443,
+                            "enableFloatingIP": false,
+                            "frontendIPConfiguration": {
+                                "id": "[concat(subscription().id, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('load_balancer_name'), '/frontendIPConfigurations/LoadBalancerFrontEnd')]"
+                            },
+                            "frontendPort": 443,
+                            "probe": {
+                                "id": "[concat(subscription().id, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('load_balancer_name'), '/probes/webHttps')]"
+                            },
+                            "protocol": "Tcp",
+                            "loadDistribution": "SourceIP"
+                        }
+                    }
+                ],
+                "probes": [
+                    {
+                        "name": "web",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "protocol": "Tcp",
+                            "port": 80,
+                            "intervalInSeconds": 15,
+                            "numberOfProbes": 5
+                        }
+                    },
+                    {
+                        "name": "webHttps",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "protocol": "Tcp",
+                            "port": 443,
+                            "intervalInSeconds": 15,
+                            "numberOfProbes": 5
+                        }
+                    }
+                ],
+                "outboundNatRules": [],
+                "inboundNatPools": [
+                    {
+                        "name": "[variables('load_balancer_natpool_name')]",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "frontendPortRangeStart": 50000,
+                            "frontendPortRangeEnd": 50119,
+                            "backendPort": 3389,
+                            "protocol": "Tcp",
+                            "frontendIPConfiguration": {
+                                "id": "[concat(subscription().id, '/resourceGroups/', resourceGroup().name, '/providers/Microsoft.Network/loadBalancers/', variables('load_balancer_name'), '/frontendIPConfigurations/LoadBalancerFrontEnd')]"
+                            }
+                        }
+                    }
+                ]
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/publicIPAddresses', variables('public_ip_name'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Network/publicIPAddresses",
+            "name": "[variables('public_ip_name')]",
+            "apiVersion": "2017-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "provisioningState": "Succeeded",
+                "publicIPAddressVersion": "IPv4",
+                "publicIPAllocationMethod": "Dynamic",
+                "idleTimeoutInMinutes": 4,
+                "dnsSettings": {
+                    "domainNameLabel": "[variables('public_ip_name')]",
+                    "fqdn": "[concat(variables('public_ip_name'), '.', [resourceGroup().location], '.cloudapp.azure.com')]"
+                }
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[variables('vnet_name')]",
+            "apiVersion": "2017-06-01",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "provisioningState": "Succeeded",
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[variables('vnet_prefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[variables('app_server_subnet_name')]",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "addressPrefix": "[variables('app_server_subnet_prefix')]"
+                        }
+                    },
+                    {
+                        "name": "[variables('load_balancer_subnet_name')]",
+                        "properties": {
+                            "provisioningState": "Succeeded",
+                            "addressPrefix": "[variables('load_balancer_subnet_prefix')]"
+                        }
+                    }
+                ],
+                "virtualNetworkPeerings": []
+            },
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "sku": {
+                "name": "Standard_LRS",
+                "tier": "Standard"
+            },
+            "kind": "Storage",
+            "name": "[parameters('storage_account_name')]",
+            "apiVersion": "2016-01-01",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "scale": null,
+            "properties": {},
+            "dependsOn": []
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "name": "[concat(variables('vnet_name'), '/', variables('app_server_subnet_name'))]",
+            "apiVersion": "2017-06-01",
+            "scale": null,
+            "properties": {
+                "provisioningState": "Succeeded",
+                "addressPrefix": "[variables('app_server_subnet_prefix')]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet_name'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Network/virtualNetworks/subnets",
+            "name": "[concat(variables('vnet_name'), '/', variables('load_balancer_subnet_name'))]",
+            "apiVersion": "2017-06-01",
+            "scale": null,
+            "properties": {
+                "provisioningState": "Succeeded",
+                "addressPrefix": "[variables('load_balancer_subnet_prefix')]"
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Network/virtualNetworks', variables('vnet_name'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/images",
+            "name": "[variables('app_server_image_name')]",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "storageProfile": {
+                    "osDisk": {
+                        "osType": "Windows",
+                        "osState": "Generalized",
+                        "diskSizeGB": 32,
+                        "blobUri": "[concat('https', '://', parameters('storage_account_name'), '.blob.core.windows.net/images/', parameters('app_server_image_vhd_name'), '.vhd')]",
+                        "caching": "ReadWrite",
+                        "storageAccountType": "Standard_LRS"
+                    },
+                    "dataDisks": []
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storage_account_name'))]"
+            ]
+        },
+        {
+            "type": "Microsoft.Compute/images",
+            "name": "[variables('load_balancer_image_name')]",
+            "apiVersion": "2016-04-30-preview",
+            "location": "[resourceGroup().location]",
+            "scale": null,
+            "properties": {
+                "storageProfile": {
+                    "osDisk": {
+                        "osType": "Windows",
+                        "osState": "Generalized",
+                        "diskSizeGB": 32,
+                        "blobUri": "[concat('https', '://', parameters('storage_account_name'), '.blob.core.windows.net/images/', parameters('load_balancer_image_vhd_name'), '.vhd')]",
+                        "caching": "ReadWrite",
+                        "storageAccountType": "Standard_LRS"
+                    },
+                    "dataDisks": []
+                }
+            },
+            "dependsOn": [
+                "[resourceId('Microsoft.Storage/storageAccounts', parameters('storage_account_name'))]"
+            ]
+        }
+    ]
+}
