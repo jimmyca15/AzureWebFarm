@@ -10,7 +10,7 @@ A common web farm architecture using ARR reverse proxy servers to delegate traff
 1. In the storage account create a [file share](https://docs.microsoft.com/en-us/azure/storage/files/storage-how-to-create-file-share) to store IIS material such as shared configuration, certificates, and application content.
 
 ### Prepare an Application Server VHD
-1. Create a VM using the desired server OS. The VM can be created in Azure or locally. If creating the VM locally make sure to use a **fix-sized** VHD with .vhd form rather than .vhdx. 
+1. Create a VM using the desired server OS. If creating the VM locally make sure to use a **fix-sized** VHD with .vhd form rather than .vhdx.
 1. Boot the VM and install all desired utilities, applications, and frameworks.
 1. Configure installed utilities to desired state.
 1. Enable IIS and all optional IIS features that will be required.
@@ -24,7 +24,47 @@ Install-Module -Name IISAdministration
     2. On the Web Server screen double-click _Shared Configuration_
     3. On the right hand side click _Export_ and choose a location to export IIS's configuration. Either export it directly to the file share or export it to a local directory and then copy the content to the directory in the file share.
     * __Note:__ To access the file share from the virtual machine see the _Mounting Azure File Share_ section below
-1. Follow the steps listed on how to [Prepare a Windows VHD to upload to Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json)
+1. Follow the steps listed on how to [Prepare a Windows VHD to upload to Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) which includes **generalizing** the VHD.
+* **Pitfall:** Make sure not to enable IIS shared configuration or the central certificate store before generalizing as encrypted credentials are not preserved in generalization.
+
+### Prepare an ARR (Load Balancing) Server VHD
+1. Create a VM using the desired server OS. If creating the VM locally make sure to use a **fix-sized** VHD with .vhd form rather than .vhdx.
+1. Boot the VM and install all desired utilities, applications, and frameworks.
+1. Configure installed utilities to desired state.
+1. Enable IIS and all optional IIS features that will be required.
+1. Download and install the IIS [Application Request Routing](https://www.iis.net/downloads/microsoft/application-request-routing) (ARR) module.
+1. Install the [PowerShellGet](https://docs.microsoft.com/en-us/powershell/gallery/readme#supported-operating-systems) module.
+1. Install the [IISAdministration PowerShell module](https://www.powershellgallery.com/packages/IISAdministration/1.1.0.0) from the PS gallery by running the following command in an elevated PowerShell prompt
+`
+Install-Module -Name IISAdministration
+`
+1. Export the IIS Configuration to the Azure file share in a directory called _ArrServerConfig_
+    1. Open IIS Manager
+    2. On the Web Server screen double-click _Shared Configuration_
+    3. On the right hand side click _Export_ and choose a location to export IIS's configuration. Either export it directly to the file share or export it to a local directory and then copy the content to the directory in the file share.
+    * __Note:__ To access the file share from the virtual machine see the _Mounting Azure File Share_ section below
+1. Follow the steps listed on how to [Prepare a Windows VHD to upload to Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) which includes **generalizing** the VHD.
+* **Pitfall:** Make sure not to enable IIS shared configuration or the central certificate store before generalizing as encrypted credentials are not preserved in generalization.
+
+
+### Upload VHDs to Azure
+ 1. On the machine containing the VHDS install the [PowerShellGet](https://docs.microsoft.com/en-us/powershell/gallery/readme#supported-operating-systems) module.
+ 1. Install [Azure PowerShell](https://docs.microsoft.com/en-us/powershell/azure/install-azurerm-ps?view=azurermps-4.4.0&viewFallbackFrom=azurermps-4.3.1)
+     * In elevated PowerShell run:
+`
+Install-Module AzureRM
+`
+     * In elevated PowerShell run:
+`
+Import-Module AzureRM
+`
+
+1. Use the _Add-AzureRmVhd_ command to upload the VHDs to Azure
+    * In PowerShell run:
+`
+Add-AzureRmVhd -Destination https://<StorageAccountName>.blob.core.windows.net/images/<VhdName>.vhd" -LocalFilePath <Path to vhd> -ResourceGroupName <ResourceGroupName> 
+`
+    * Notice how we used the images blob container we created in the very beginning
 
 
 ## Mounting Azure File Share inside a VM
