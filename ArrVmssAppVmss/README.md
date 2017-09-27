@@ -46,8 +46,7 @@ Install-Module -Name IISAdministration
 1. Follow the steps listed on how to [Prepare a Windows VHD to upload to Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) which includes **generalizing** the VHD.
 * **Pitfall:** Make sure not to enable IIS shared configuration or the central certificate store before generalizing as encrypted credentials are not preserved in generalization.
 
-
-### Upload VHDs to Azure
+### Upload VHDs To Azure
  1. On the machine containing the VHDS install the [PowerShellGet](https://docs.microsoft.com/en-us/powershell/gallery/readme#supported-operating-systems) module.
  1. Install [Azure PowerShell](https://docs.microsoft.com/en-us/powershell/azure/install-azurerm-ps?view=azurermps-4.4.0&viewFallbackFrom=azurermps-4.3.1)
      * In elevated PowerShell run:
@@ -62,10 +61,22 @@ Import-Module AzureRM
 1. Use the _Add-AzureRmVhd_ command to upload the VHDs to Azure
     * In PowerShell run:
 `
-Add-AzureRmVhd -Destination https://<StorageAccountName>.blob.core.windows.net/images/<VhdName>.vhd" -LocalFilePath <Path to vhd> -ResourceGroupName <ResourceGroupName> 
+Add-AzureRmVhd -Destination https://<StorageAccountName>.blob.core.windows.net/images/<VhdName>.vhd -LocalFilePath <PathToVhd> -ResourceGroupName <ResourceGroupName>
 `
     * Notice how we used the images blob container we created in the very beginning
 
+### Deploy Resources To Azure
+1. Download this directory to a machine that has [Azure PowerShell](https://docs.microsoft.com/en-us/powershell/azure/install-azurerm-ps?view=azurermps-4.4.0&viewFallbackFrom=azurermps-4.3.1) installed.
+1. Open the parameters.json file and fill out the parameters for the deployment.
+2. Run the deploy.ps1 script
+    * In PowerShell run:
+`
+.\deploy.ps1 -subscriptionId <SubscriptionId> -resourceGroupName <ResourceGroupName pick one if does not exist> -deploymentName <PickAnyName>
+`
+
+### Scale Up and Verify
+The targeted Azure subscription should now contain all the desired resources. Navigate to the [Azure portal](https://portal.azure.com) to see the newly created resources. The VM Scale set can be scaled up and down manually through the portal. By selecting the load balancer that has been deployed and inspecting the inbound NAT rules, an IP address and port can be obtained for connecting to one of the scale set VMs via remote desktop.
+    
 
 ## Mounting Azure File Share inside a VM
 
