@@ -25,7 +25,7 @@ Install-Module -Name IISAdministration
     3. On the right hand side click _Export_ and choose a location to export IIS's configuration. Either export it directly to the file share or export it to a local directory and then copy the content to the directory in the file share.
     * __Note:__ To access the file share from the virtual machine see the _Mounting Azure File Share_ section below
 1. Follow the steps listed on how to [Prepare a Windows VHD to upload to Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) which includes **generalizing** the VHD.
-* **Pitfall:** Make sure not to enable IIS shared configuration or the central certificate store before generalizing as encrypted credentials are not preserved in generalization.
+* **Pitfall:** Make sure to disable IIS shared configuration and the central certificate store before generalizing because encrypted credentials are not preserved in generalization.
 
 ### Prepare an ARR (Load Balancing) Server VHD
 1. Create a VM using the desired server OS. If creating the VM locally make sure to use a **fix-sized** VHD with .vhd form rather than .vhdx.
@@ -45,7 +45,7 @@ Install-Module -Name IISAdministration
     * __Note:__ To access the file share from the virtual machine see the _Mounting Azure File Share_ section below
 1. Create a directory in the Azure file share named _certs_ to act as the [IIS central certificate store](https://docs.microsoft.com/en-us/iis/get-started/whats-new-in-iis-8/iis-80-centralized-ssl-certificate-support-ssl-scalability-and-manageability)
 1. Follow the steps listed on how to [Prepare a Windows VHD to upload to Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) which includes **generalizing** the VHD.
-* **Pitfall:** Make sure not to enable IIS shared configuration or the central certificate store before generalizing as encrypted credentials are not preserved in generalization.
+* **Pitfall:** Make sure to disable IIS shared configuration and the central certificate store before generalizing because encrypted credentials are not preserved in generalization.
 
 ### Upload VHDs To Azure
  1. On the machine containing the VHDS install the [PowerShellGet](https://docs.microsoft.com/en-us/powershell/gallery/readme#supported-operating-systems) module.
@@ -68,8 +68,8 @@ Add-AzureRmVhd -Destination https://<StorageAccountName>.blob.core.windows.net/i
 
 ### Deploy Resources To Azure
 1. Download this directory to a machine that has [Azure PowerShell](https://docs.microsoft.com/en-us/powershell/azure/install-azurerm-ps?view=azurermps-4.4.0&viewFallbackFrom=azurermps-4.3.1) installed.
-1. Open the parameters.json file and fill out the parameters for the deployment.
-2. Run the deploy.ps1 script
+1. Open the [parameters.json](./parameters.json) file and fill out the parameters for the deployment.
+2. Run the [deploy.ps1](./deploy.ps1) script
     * In PowerShell run:
 `
 .\deploy.ps1 -subscriptionId <SubscriptionId> -resourceGroupName <ResourceGroupName pick one if does not exist> -deploymentName <PickAnyName>
