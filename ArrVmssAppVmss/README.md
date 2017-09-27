@@ -43,6 +43,7 @@ Install-Module -Name IISAdministration
     2. On the Web Server screen double-click _Shared Configuration_
     3. On the right hand side click _Export_ and choose a location to export IIS's configuration. Either export it directly to the file share or export it to a local directory and then copy the content to the directory in the file share.
     * __Note:__ To access the file share from the virtual machine see the _Mounting Azure File Share_ section below
+1. Create a directory in the Azure file share named _certs_ to act as the [IIS central certificate store](https://docs.microsoft.com/en-us/iis/get-started/whats-new-in-iis-8/iis-80-centralized-ssl-certificate-support-ssl-scalability-and-manageability)
 1. Follow the steps listed on how to [Prepare a Windows VHD to upload to Azure](https://docs.microsoft.com/en-us/azure/virtual-machines/windows/prepare-for-upload-vhd-image?toc=%2fazure%2fvirtual-machines%2fwindows%2ftoc.json) which includes **generalizing** the VHD.
 * **Pitfall:** Make sure not to enable IIS shared configuration or the central certificate store before generalizing as encrypted credentials are not preserved in generalization.
 
@@ -76,7 +77,42 @@ Add-AzureRmVhd -Destination https://<StorageAccountName>.blob.core.windows.net/i
 
 ### Scale Up and Verify
 The targeted Azure subscription should now contain all the desired resources. Navigate to the [Azure portal](https://portal.azure.com) to see the newly created resources. The VM Scale set can be scaled up and down manually through the portal. By selecting the load balancer that has been deployed and inspecting the inbound NAT rules, an IP address and port can be obtained for connecting to one of the scale set VMs via remote desktop.
-    
+
+## Configuration Guide
+
+This webfarm strategy relies on IIS shared configuration stored in an Azure file share.
+
+* The ARR and application servers should each use IIS shared configuration where the configuration is located on an Azure file share
+* There should be two different configurations, one for all of the ARR servers and one for all of the application servers.
+* The servers can be configured at any time either before deployment or afterwards once the machines have been allocated in Azure.
+    * Since the machines are using shared configuration, a local desktop machine can be used to target the configuration and make all necessary adjustments. 
+* A local user for accessing the shared configuration is created during VM provisioning on Azure by the [vssinit](../scripts/vssinit.ps1) script that is linked in the ARM template.
+* To start using a shared configuration on Azure files a **local user** must exist with the following credentials:
+    * Username: storage account name
+    * Password: storage account key
+
+### ARR Server Configuration
+
+The ARR servers are set up to accept HTTPS connections from the Azure load balancer and then forward them to the application servers. These servers must be configured to be aware of what internal IP addresses the application servers are using. A health check should be configured so that the ARR servers can detect if the application server scale set has scaled in or out.
+
+* An ARR server farm should be created to store the upstream servers
+* All possible IP addresses for the application server scale set VMs should be listed as servers in the server farm
+    * E.g. If the subnet prefix for app servers is 10.5.0.0/21 and 50 VMs are expected then the IP addresses 10.5.0.4 - 10.5.0.53 should be added to the server farm
+* ARR Health checking should be configured to detect when the app server scale set performs auto scaling
+    * A shorter health check interval means quicker identification of newly provisioned VMs
+    * A shorter health check timeout means quicker identification of deallocated VMs
+* HTTPS bindings should be created to utilize the [IIS central certificate store](https://docs.microsoft.com/en-us/iis/get-started/whats-new-in-iis-8/iis-80-centralized-ssl-certificate-support-ssl-scalability-and-manageability)
+    * The central certificate store is automatically enabled on VM provision by the [vssinit](../scripts/vssinit.ps1) script
+
+### Application Server Configuration
+
+Application servers should be able to serve content for all the bindings that are registered on the ARR servers. Having web site content in a central location will allow application servers to scale in and out automatically while always having access to the latest content.
+
+* Bindings should be created using the same hostnames that are used on the ARR servers
+* Web sites should be configured to serve content from the Azure file share
+    * The physical path should be accessed using the credentials of an Azure file share user
+    * Username: storage account name
+    * Password: storage account key
 
 ## Mounting Azure File Share inside a VM
 
