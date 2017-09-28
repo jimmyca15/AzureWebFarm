@@ -370,7 +370,7 @@
                 "idleTimeoutInMinutes": 4,
                 "dnsSettings": {
                     "domainNameLabel": "[variables('public_ip_name')]",
-                    "fqdn": "[concat(variables('public_ip_name'), '.', [resourceGroup().location], '.cloudapp.azure.com')]"
+                    "fqdn": "[concat(variables('public_ip_name'), '.', resourceGroup().location, '.cloudapp.azure.com')]"
                 }
             },
             "dependsOn": []
