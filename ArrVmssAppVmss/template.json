@@ -460,7 +460,6 @@
                     "osDisk": {
                         "osType": "Windows",
                         "osState": "Generalized",
-                        "diskSizeGB": 32,
                         "blobUri": "[concat('https', '://', parameters('storage_account_name'), '.blob.core.windows.net/images/', parameters('app_server_image_vhd_name'), '.vhd')]",
                         "caching": "ReadWrite",
                         "storageAccountType": "Standard_LRS"
@@ -483,7 +482,6 @@
                     "osDisk": {
                         "osType": "Windows",
                         "osState": "Generalized",
-                        "diskSizeGB": 32,
                         "blobUri": "[concat('https', '://', parameters('storage_account_name'), '.blob.core.windows.net/images/', parameters('load_balancer_image_vhd_name'), '.vhd')]",
                         "caching": "ReadWrite",
                         "storageAccountType": "Standard_LRS"
