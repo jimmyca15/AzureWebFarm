@@ -128,7 +128,7 @@
                                     "autoUpgradeMinorVersion": true,
                                     "settings": {
                                         "fileUris": [
-                                            "https://gist.githubusercontent.com/jimmyca15/223799a9a05c073d899049e110ca7872/raw/e763759604a6fb9bc05c56b677555a906b2c37ae/VssInit.ps1"
+                                            "https://raw.githubusercontent.com/jimmyca15/AzureWebFarm/master/scripts/vssinit.ps1"
                                         ]
                                     },
                                     "protectedSettings": {
@@ -227,7 +227,7 @@
                                     "autoUpgradeMinorVersion": true,
                                     "settings": {
                                         "fileUris": [
-                                            "https://gist.githubusercontent.com/jimmyca15/223799a9a05c073d899049e110ca7872/raw/e763759604a6fb9bc05c56b677555a906b2c37ae/VssInit.ps1"
+                                            "https://raw.githubusercontent.com/jimmyca15/AzureWebFarm/master/scripts/vssinit.ps1"
                                         ]
                                     },
                                     "protectedSettings": {
