@@ -2,7 +2,7 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "default_name": {
+        "default_name_prefix": {
             "type": "string"
         },
         "storage_account_name": {
@@ -40,17 +40,17 @@
         }
     },
     "variables": {
-        "load_balancer_name": "[parameters('default_name')]",
-        "public_ip_name": "[parameters('default_name')]",
-        "vnet_name": "[parameters('default_name')]",
-        "app_server_vss_name": "[concat(parameters('default_name'),'Apps')]",
-        "load_balancer_vss_name": "[concat(parameters('default_name'),'Lb')]",
+        "load_balancer_name": "[parameters('default_name_prefix')]",
+        "public_ip_name": "[parameters('default_name_prefix')]",
+        "vnet_name": "[parameters('default_name_prefix')]",
+        "app_server_vss_name": "[concat(parameters('default_name_prefix'),'Apps')]",
+        "load_balancer_vss_name": "[concat(parameters('default_name_prefix'),'Lb')]",
         "load_balancer_backend_pool_name": "[concat('bepool_', variables('load_balancer_vss_name'))]",
         "load_balancer_natpool_name": "[concat('natpool_', variables('load_balancer_vss_name'))]",
-        "app_server_subnet_name": "[concat(parameters('default_name'),'Apps')]",
-        "load_balancer_subnet_name": "[concat(parameters('default_name'),'Lb')]",
-        "app_server_image_name": "[concat(parameters('default_name'),'AppServer')]",
-        "load_balancer_image_name": "[concat(parameters('default_name'),'LoadBalancer')]",
+        "app_server_subnet_name": "[concat(parameters('default_name_prefix'),'Apps')]",
+        "load_balancer_subnet_name": "[concat(parameters('default_name_prefix'),'Lb')]",
+        "app_server_image_name": "[concat(parameters('default_name_prefix'),'AppServer')]",
+        "load_balancer_image_name": "[concat(parameters('default_name_prefix'),'LoadBalancer')]",
         "drive_letter": "G",
         "file_share_location": "[concat('\\\\', parameters('storage_account_name'), '.file.core.windows.net\\', parameters('file_share_name'))]",
         "vnet_prefix": "10.5.0.0/16",
@@ -132,7 +132,7 @@
                                         ]
                                     },
                                     "protectedSettings": {
-                                        "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -File ./VssInit.ps1 -StorageAccountName ', parameters('storage_account_name'), ' -StorageAccountKey ', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storage_account_name')), '2016-01-01').keys[0].value, ' -DriveLetter ', variables('drive_letter'), ' -FileShareLocation ', variables('file_share_location'), ' -SharedConfigPath ', parameters('shared_config_directory'), ' -ConfigKeyPassword ', parameters('config_key_password'), ' -CertStorePath ', parameters('cert_store_directory'), ' -CertStoreKeyPassword ', parameters('cert_store_key_password'), ' >> c:\\vssinit.log 2>&1 ')]"
+                                        "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -File ./VssInit.ps1 -StorageAccountName ', parameters('storage_account_name'), ' -StorageAccountKey ', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storage_account_name')), '2016-01-01').keys[0].value, ' -DriveLetter ', variables('drive_letter'), ' -FileShareLocation ', variables('file_share_location'), ' -SharedConfigPath ', parameters('shared_config_directory'), ' -ConfigKeyPassword ', parameters('config_key_password'), ' -CertStorePath ', parameters('cert_store_directory'), ' -CertStoreKeyPassword ', parameters('cert_store_key_password'))]"
                                     }
                                 }
                             }
@@ -231,7 +231,7 @@
                                         ]
                                     },
                                     "protectedSettings": {
-                                        "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -File ./VssInit.ps1 -StorageAccountName ', parameters('storage_account_name'), ' -StorageAccountKey ', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storage_account_name')), '2016-01-01').keys[0].value, ' -DriveLetter ', variables('drive_letter'), ' -FileShareLocation ', variables('file_share_location'), ' -SharedConfigPath ', parameters('load_balancer_shared_config_directory'), ' -ConfigKeyPassword ', parameters('config_key_password'), ' -CertStorePath ', parameters('cert_store_directory'), ' -CertStoreKeyPassword ', parameters('cert_store_key_password'), ' >> c:\\vssinit.log 2>&1 ')]"
+                                        "commandToExecute": "[concat('powershell.exe -ExecutionPolicy Unrestricted -File ./VssInit.ps1 -StorageAccountName ', parameters('storage_account_name'), ' -StorageAccountKey ', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storage_account_name')), '2016-01-01').keys[0].value, ' -DriveLetter ', variables('drive_letter'), ' -FileShareLocation ', variables('file_share_location'), ' -SharedConfigPath ', parameters('load_balancer_shared_config_directory'), ' -ConfigKeyPassword ', parameters('config_key_password'), ' -CertStorePath ', parameters('cert_store_directory'), ' -CertStoreKeyPassword ', parameters('cert_store_key_password'))]"
                                     }
                                 }
                             }

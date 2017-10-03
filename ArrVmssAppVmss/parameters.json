@@ -2,7 +2,7 @@
     "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
-        "default_name": {
+        "default_name_prefix": {
             "value": "<Default name used for Azure Resources in this deployment. Pick a name that will not collide with other resources>"
         },
         "storage_account_name": {
