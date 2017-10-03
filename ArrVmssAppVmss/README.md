@@ -89,6 +89,8 @@ Add-AzureRmVhd -Destination https://<StorageAccountName>.blob.core.windows.net/i
 `
     * Notice how we used the images blob container we created in the very beginning
 
+![AddAzureRmVhd]
+
 ### Deploy Resources To Azure
 1. Download this directory to a machine that has [Azure PowerShell](https://docs.microsoft.com/en-us/powershell/azure/install-azurerm-ps?view=azurermps-4.4.0&viewFallbackFrom=azurermps-4.3.1) installed.
 1. Open the [parameters.json](./parameters.json) file and fill out the parameters for the deployment.
@@ -129,11 +131,10 @@ The targeted Azure subscription should now contain all the desired resources. Na
     1. Select the load balancer resource after scaling up the ARR server VM scale set
     2. Select the _Inbound NAT rules_ tab in the load balancer settings to find the IP Address and Ports that are available for remote desktop connections
         * By default the starting port is 50000 and the IP Address will be the IP address of the public IP that was created
-
-![InboundNatRules]
-
     3. Connect using remote desktop to the IP Address and port combination found in the Inbound NAT rules
         * By selecting the virtual network resource, the private IP addresses of the application servers can be found and used to establish a remote desktop session from the ARR server session
+
+![InboundNatRules]
 
 ![VnetDevices]
 
@@ -163,11 +164,19 @@ The ARR servers are set up to accept HTTPS connections from the Azure load balan
 * An ARR server farm should be created to store the upstream servers
 * All possible IP addresses for the application server scale set VMs should be listed as servers in the server farm
     * E.g. If the subnet prefix for app servers is 10.5.0.0/21 and 50 VMs are expected then the IP addresses 10.5.0.4 - 10.5.0.53 should be added to the server farm
+
+![ArrServersListing]
+
 * ARR Health checking should be configured to detect when the app server scale set performs auto scaling
     * A shorter health check interval means quicker identification of newly provisioned VMs
     * A shorter health check timeout means quicker identification of deallocated VMs
+
+![ArrHealthTest]
+
 * HTTPS bindings should be created to utilize the [IIS central certificate store](https://docs.microsoft.com/en-us/iis/get-started/whats-new-in-iis-8/iis-80-centralized-ssl-certificate-support-ssl-scalability-and-manageability)
     * The central certificate store is automatically enabled on VM provision by the [vssinit](../scripts/vssinit.ps1) script
+
+![BindingConfiguration]
 
 ### Application Server Configuration
 
@@ -197,7 +206,7 @@ net user <username> <password> /ADD /Y
 ```
 
 ### Mounting Azure File Share inside a VM
-1. Create a local user to access the file share as mentioned in [above](#creating-file-share-user)
+1. Create a local user to access the file share as mentioned [above](#creating-file-share-user)
 2. Run the following command from an elevated Command Prompt
 ```
 net use G: \\<Storage Account Name>.file.core.windows.net\<File Share Name>  /u:<Storage Account Name> <Storage Account Key>
@@ -214,6 +223,12 @@ net use G: \\<Storage Account Name>.file.core.windows.net\<File Share Name>  /u:
     * example: \\contoso.file.core.windows.net\MyIisFileShare
 5. Click the _Connect As..._ button and fill out the form with the credentials for the local file share user
 
+![WebSiteAzureFiles]
+
+[AddAzureRmVhd]: imgs/AddAzureRmVhd.PNG "Uploading a VHD to azure"
+[ArrHealthTest]: imgs/ArrHealthTest.PNG "Health check configuration for the IIS ARR module in the Azure web farm"
+[ArrServersListing]: imgs/ArrServersListing.PNG "List of all configured backend application servers. Two are running"
+[BindingConfiguration]: imgs/BindingConfiguration.PNG "Binding setup for ARR server"
 [CreateBlobContainer]: imgs/CreateBlobContainer.PNG "Creating a blob container in the Azure Portal"
 [CreateFileShare]: imgs/CreateFileShare.PNG "Creating a file share in the Azure Portal"
 [CreateStorageAccount]: imgs/CreateStorageAccount.PNG "Creating a storage account in the Azure Portal"
@@ -224,3 +239,4 @@ net use G: \\<Storage Account Name>.file.core.windows.net\<File Share Name>  /u:
 [ScalingOut]: imgs/ScalingOut.PNG "Scaling out a VM scale set in the Azure Portal"
 [ScalingOut3]: imgs/ScalingOut3.PNG "VM scale set instances indicating that they are finished provisioning"
 [VnetDevices]: imgs/VnetDevices.PNG "All Azure virtual machines connected to the virtual network"
+[WebSiteAzureFiles]: imgs/WebSiteAzureFiles.PNG "Setting up a web site to serve from an Azure file share"
