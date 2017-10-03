@@ -12,14 +12,25 @@ A common web farm architecture using ARR reverse proxy servers to delegate traff
     * If a storage account already exists it may be used for this guide.
     * All of the resources that are created will belong to the same resource group as the storage account.
     * **Important**: Use a storage account name that is 20 characters or less to be able to map the storage account to a local Windows user.
-1. Select the _Blobs_ service for the storage account and create a [blob container](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction) named _images_ to store VHDs for the ARR and application servers.
-1. Select the _Files_ service for the storage account and create a [file share](https://docs.microsoft.com/en-us/azure/storage/files/storage-how-to-create-file-share) to store IIS material such as shared configuration, certificates, and application content.
+
+![CreateStorageAccount]
+
+2. Select the _Blobs_ service for the storage account and create a [blob container](https://docs.microsoft.com/en-us/azure/storage/blobs/storage-blobs-introduction) named _images_ to store VHDs for the ARR and application servers.
+
+![CreateBlobContainer]
+
+3. Select the _Files_ service for the storage account and create a [file share](https://docs.microsoft.com/en-us/azure/storage/files/storage-how-to-create-file-share) to store IIS material such as shared configuration, certificates, and application content.
     * Use any name for the file share. The name will be used as a parameter in a later step.
-1. Select the file share and create the following directories
+
+![CreateFileShare]
+
+4. Select the file share and create the following directories
     * AppServerConfig: This directory will be used to store shared configuration for the application servers.
     * ArrServerConfig: This directory will be used to store shared configuration for the ARR load balancing servers.
     * CentralCertStore: This directory will be used to store the certificates for the [IIS central certificate store](https://docs.microsoft.com/en-us/iis/get-started/whats-new-in-iis-8/iis-80-centralized-ssl-certificate-support-ssl-scalability-and-manageability).
     * Content: This directory will be used for web site content.
+
+![FoldersCreated]    
 
 ### Prepare an Application Server VHD
 1. Create a Hyper-V VM (Virtual Machine) using the desired Windows Server operating system. 
@@ -94,6 +105,8 @@ Add-AzureRmVhd -Destination https://<StorageAccountName>.blob.core.windows.net/i
 ### Scale Up and Verify
 The targeted Azure subscription should now contain all the desired resources. Navigate to the [Azure portal](https://portal.azure.com) to see the newly created resources. The [VM scale set]((https://docs.microsoft.com/en-us/azure/virtual-machine-scale-sets/virtual-machine-scale-sets-overview)) can be scaled up and down manually through the portal. By selecting the load balancer that has been deployed and inspecting the inbound NAT rules, an IP address and port can be obtained for connecting to one of the ARR scale set VMs via remote desktop. Only the load balancing servers are available through the public IP address. This narrows down the exposed surface area of the web farm which is beneficial to security. As a result, connecting to the application servers with remote desktop requires that a connection be established from one of the ARR machines.
 
+![ResourcesCreated]
+
 1. Verify the resources were created by viewing them in the Azure portal
     * 1 Load Balancer
     * 1 Public IP Address
@@ -106,16 +119,29 @@ The targeted Azure subscription should now contain all the desired resources. Na
     3. Increase the instances to the desired number and click save to finish scaling up the virtual machine scale set
     4. Check the _Instances_ tab to confirm that the instances are being created.
     4. Repeat for the other virtual machine scale set
+
+![ScalingOut]
+
+![ScalingOut3]
+
 3. Verify VMs with remote desktop
     * The ARR servers are accessible through a public IP address, however to access the application servers a remote desktop session will need to be created from an ARR server
     1. Select the load balancer resource after scaling up the ARR server VM scale set
     2. Select the _Inbound NAT rules_ tab in the load balancer settings to find the IP Address and Ports that are available for remote desktop connections
         * By default the starting port is 50000 and the IP Address will be the IP address of the public IP that was created
+
+![InboundNatRules]
+
     3. Connect using remote desktop to the IP Address and port combination found in the Inbound NAT rules
         * By selecting the virtual network resource, the private IP addresses of the application servers can be found and used to establish a remote desktop session from the ARR server session
+
+![VnetDevices]
+
 4. Verify IIS is serving HTTP requests
     * The VM scale set is accessible through an Azure allocated DNS name in the form of _\<IP address name\>.\<resource group location\>.cloudapp.azure.com_. ex: contoso.westus.cloudapp.azure.com
     * This information for connecting to the VM scale set through the internet is available in the Azure portal by selecting the public IP resource
+
+![RequestToVmss]
 
 ## Configuration Guide
 
@@ -187,3 +213,14 @@ net use G: \\<Storage Account Name>.file.core.windows.net\<File Share Name>  /u:
 `
     * example: \\contoso.file.core.windows.net\MyIisFileShare
 5. Click the _Connect As..._ button and fill out the form with the credentials for the local file share user
+
+[CreateBlobContainer]: imgs/CreateBlobContainer.PNG "Creating a blob container in the Azure Portal"
+[CreateFileShare]: imgs/CreateFileShare.PNG "Creating a file share in the Azure Portal"
+[CreateStorageAccount]: imgs/CreateStorageAccount.PNG "Creating a storage account in the Azure Portal"
+[FoldersCreated]: imgs/FoldersCreated.PNG "All folders created for the deployment"
+[InboundNatRules]: imgs/InboundNatRules.PNG "List of Network Address Translation (NAT) rules for the Azure Load Balancer"
+[RequestToVmss]: imgs/RequestToVmss.PNG "HTTP request to validate the web farm servers are running"
+[ResourcesCreated]: imgs/ResourcesCreated.PNG "All resources created by the deployment script"
+[ScalingOut]: imgs/ScalingOut.PNG "Scaling out a VM scale set in the Azure Portal"
+[ScalingOut3]: imgs/ScalingOut3.PNG "VM scale set instances indicating that they are finished provisioning"
+[VnetDevices]: imgs/VnetDevices.PNG "All Azure virtual machines connected to the virtual network"
